@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Anomalias de Temperatura Global (1880-2025) - D3.js</title>
+        <script src="https://d3js.org/d3.v7.min.js"></script>
+        <style>
+            body { font-family:'Space Grotesk', sans-serif; background:#0a0e27; color:#e8f5e9; padding:2rem; }
+            .container { max-width:1400px; margin:0 auto; }
+            header { text-align:center; margin-bottom:2rem; }
+            h1 { font-size:clamp(2rem,5vw,4rem); font-weight:700; background:linear-gradient(135deg,#ff4757,#ffa502); background-clip:text; -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+            .subtitle { font-family:'IBM Plex Mono', monospace; font-size:1rem; color:#90a4ae; }
+            .chart-container { background:rgba(22,27,51,0.7); backdrop-filter:blur(10px); border-radius:20px; padding:2rem; }
+            .tooltip { position:absolute; background:rgba(22,27,51,0.95); border:2px solid #ffa502; border-radius:12px; padding:1rem 1.25rem; pointer-events:none; opacity:0; transition:opacity 0.2s; font-family:'IBM Plex Mono', monospace; z-index:1000; }
+            .tooltip-year { color:#00d9ff; font-weight:600; }
+            .tooltip-value { color:#ff4757; font-weight:700; }
+            .tooltip-label { color:#90a4ae; font-size:0.75rem; margin-top:0.25rem; }
+    </style>
+    </head>
+    <body>
+        <div class="container">
+            <header>
+                <h1>🌡️ Aquecimento Global</h1>
+                <p class="subtitle">Anomalias de Temperatura Global (1880–2025)</p>
+            </header>
+            <div class="chart-container">
+                <div id="grafico"></div>
+            </div>
+            <div class="tooltip"></div>
+        </div>
+
+        <script>
+            document.addEventListener("DOMContentLoaded", function(){
+                // Dados pré-carregados: coluna J-D (anomalia anual)
+                const dados = [
+                    {ano: 1880.0, anomalia: -0.18},{ano: 1881.0, anomalia: -0.09},{ano: 1882.0, anomalia: -0.12},{ano: 1883.0, anomalia: -0.18},
+                    {ano: 1884.0, anomalia: -0.29},{ano: 1885.0, anomalia: -0.34},{ano: 1886.0, anomalia: -0.32},{ano: 1887.0, anomalia: -0.37},
+                    {ano: 1888.0, anomalia: -0.18},{ano: 1889.0, anomalia: -0.11},{ano: 1890.0, anomalia: -0.36},{ano: 1891.0, anomalia: -0.23},
+                    {ano: 1892.0, anomalia: -0.27},{ano: 1893.0, anomalia: -0.31},{ano: 1894.0, anomalia: -0.31},{ano: 1895.0, anomalia: -0.23},
+                    {ano: 1896.0, anomalia: -0.12},{ano: 1897.0, anomalia: -0.12},{ano: 1898.0, anomalia: -0.28},{ano: 1899.0, anomalia: -0.18},
+                    {ano: 1900.0, anomalia: -0.09},{ano: 1901.0, anomalia: -0.16},{ano: 1902.0, anomalia: -0.29},{ano: 1903.0, anomalia: -0.38},
+                    {ano: 1904.0, anomalia: -0.48},{ano: 1905.0, anomalia: -0.27},{ano: 1906.0, anomalia: -0.23},{ano: 1907.0, anomalia: -0.39},
+                    {ano: 1908.0, anomalia: -0.43},{ano: 1909.0, anomalia: -0.49},{ano: 1910.0, anomalia: -0.44},{ano: 1911.0, anomalia: -0.45},
+                    {ano: 1912.0, anomalia: -0.37},{ano: 1913.0, anomalia: -0.35},{ano: 1914.0, anomalia: -0.16},{ano: 1915.0, anomalia: -0.14},
+                    {ano: 1916.0, anomalia: -0.36},{ano: 1917.0, anomalia: -0.46},{ano: 1918.0, anomalia: -0.3},{ano: 1919.0, anomalia: -0.28},
+                    {ano: 1920.0, anomalia: -0.28},{ano: 1921.0, anomalia: -0.19},{ano: 1922.0, anomalia: -0.29},{ano: 1923.0, anomalia: -0.27},
+                    {ano: 1924.0, anomalia: -0.27},{ano: 1925.0, anomalia: -0.22},{ano: 1926.0, anomalia: -0.11},{ano: 1927.0, anomalia: -0.22},
+                    {ano: 1928.0, anomalia: -0.2},{ano: 1929.0, anomalia: -0.36},{ano: 1930.0, anomalia: -0.16},{ano: 1931.0, anomalia: -0.09},
+                    {ano: 1932.0, anomalia: -0.16},{ano: 1933.0, anomalia: -0.29},{ano: 1934.0, anomalia: -0.13},{ano: 1935.0, anomalia: -0.2},
+                    {ano: 1936.0, anomalia: -0.15},{ano: 1937.0, anomalia: -0.03},{ano: 1938.0, anomalia: 0.0},{ano: 1939.0, anomalia: -0.02},
+                    {ano: 1940.0, anomalia: 0.12},{ano: 1941.0, anomalia: 0.18},{ano: 1942.0, anomalia: 0.06},{ano: 1943.0, anomalia: 0.08},
+                    {ano: 1944.0, anomalia: 0.2},{ano: 1945.0, anomalia: 0.09},{ano: 1946.0, anomalia: -0.08},{ano: 1947.0, anomalia: -0.03},
+                    {ano: 1948.0, anomalia: -0.11},{ano: 1949.0, anomalia: -0.11},{ano: 1950.0, anomalia: -0.18},{ano: 1951.0, anomalia: -0.07},
+                    {ano: 1952.0, anomalia: 0.01},{ano: 1953.0, anomalia: 0.08},{ano: 1954.0, anomalia: -0.13},{ano: 1955.0, anomalia: -0.14},
+                    {ano: 1956.0, anomalia: -0.19},{ano: 1957.0, anomalia: 0.05},{ano: 1958.0, anomalia: 0.06},{ano: 1959.0, anomalia: 0.03},
+                    {ano: 1960.0, anomalia: -0.03},{ano: 1961.0, anomalia: 0.06},{ano: 1962.0, anomalia: 0.03},{ano: 1963.0, anomalia: 0.05},
+                    {ano: 1964.0, anomalia: -0.2},{ano: 1965.0, anomalia: -0.11},{ano: 1966.0, anomalia: -0.06},{ano: 1967.0, anomalia: -0.02},
+                    {ano: 1968.0, anomalia: -0.08},{ano: 1969.0, anomalia: 0.05},{ano: 1970.0, anomalia: 0.03},{ano: 1971.0, anomalia: -0.08},
+                    {ano: 1972.0, anomalia: 0.01},{ano: 1973.0, anomalia: 0.16},{ano: 1974.0, anomalia: -0.07},{ano: 1975.0, anomalia: -0.01},
+                    {ano: 1976.0, anomalia: -0.1},{ano: 1977.0, anomalia: 0.18},{ano: 1978.0, anomalia: 0.07},{ano: 1979.0, anomalia: 0.16},
+                    {ano: 1980.0, anomalia: 0.26},{ano: 1981.0, anomalia: 0.32},{ano: 1982.0, anomalia: 0.14},{ano: 1983.0, anomalia: 0.31},
+                    {ano: 1984.0, anomalia: 0.16},{ano: 1985.0, anomalia: 0.12},{ano: 1986.0, anomalia: 0.18},{ano: 1987.0, anomalia: 0.32},
+                    {ano: 1988.0, anomalia: 0.39},{ano: 1989.0, anomalia: 0.27},{ano: 1990.0, anomalia: 0.45},{ano: 1991.0, anomalia: 0.41},
+                    {ano: 1992.0, anomalia: 0.22},{ano: 1993.0, anomalia: 0.23},{ano: 1994.0, anomalia: 0.32},{ano: 1995.0, anomalia: 0.45},
+                    {ano: 1996.0, anomalia: 0.33},{ano: 1997.0, anomalia: 0.47},{ano: 1998.0, anomalia: 0.61},{ano: 1999.0, anomalia: 0.38},
+                    {ano: 2000.0, anomalia: 0.39},{ano: 2001.0, anomalia: 0.53},{ano: 2002.0, anomalia: 0.63},{ano: 2003.0, anomalia: 0.62},
+                    {ano: 2004.0, anomalia: 0.53},{ano: 2005.0, anomalia: 0.68},{ano: 2006.0, anomalia: 0.64},{ano: 2007.0, anomalia: 0.67},
+                    {ano: 2008.0, anomalia: 0.54},{ano: 2009.0, anomalia: 0.66},{ano: 2010.0, anomalia: 0.73},{ano: 2011.0, anomalia: 0.61},
+                    {ano: 2012.0, anomalia: 0.65},{ano: 2013.0, anomalia: 0.68},{ano: 2014.0, anomalia: 0.75},{ano: 2015.0, anomalia: 0.9},
+                    {ano: 2016.0, anomalia: 1.01},{ano: 2017.0, anomalia: 0.92},{ano: 2018.0, anomalia: 0.85},{ano: 2019.0, anomalia: 0.98},
+                    {ano: 2020.0, anomalia: 1.01},{ano: 2021.0, anomalia: 0.85},{ano: 2022.0, anomalia: 0.89},{ano: 2023.0, anomalia: 1.17},
+                    {ano: 2024.0, anomalia: 1.28},{ano: 2025.0, anomalia: 1.19},
+                    ];
+
+                // Calcula média móvel de 10 anos
+                const dadosMedia = dados.map((d,i)=>{
+                    const janela = 10;
+                    const subset = dados.slice(Math.max(0,i-janela+1), i+1);
+                    return {ano:d.ano, mediaMovel: d3.mean(subset,s=>s.anomalia)};
+                });
+
+                const margin = {top:40,right:40,bottom:80,left:80};
+                const width = document.getElementById("grafico").clientWidth - margin.left - margin.right;
+                const height = 500 - margin.top - margin.bottom;
+
+                const svg = d3.select("#grafico").append("svg")
+                    .attr("width", width+margin.left+margin.right)
+                    .attr("height", height+margin.top+margin.bottom);
+
+                const g = svg.append("g").attr("transform",`translate(${margin.left},${margin.top})`);
+
+                const x = d3.scaleLinear().domain(d3.extent(dados,d=>d.ano)).range([0,width]);
+                const y = d3.scaleLinear().domain([d3.min(dados,d=>d.anomalia)-0.1,d3.max(dados,d=>d.anomalia)+0.1]).range([height,0]).nice();
+
+                g.append("line")
+                    .attr("x1",0).attr("x2",width)
+                    .attr("y1",y(0)).attr("y2",y(0))
+                    .attr("stroke","rgba(255,255,255,0.4)").attr("stroke-width",2).attr("stroke-dasharray","8,4");
+
+                g.append("g").attr("transform",`translate(0,${height})`).call(d3.axisBottom(x).ticks(12).tickFormat(d3.format("d")));
+                g.append("g").call(d3.axisLeft(y).ticks(8).tickFormat(d=>d.toFixed(2)+"°C"));
+
+                // Legenda do Eixo X
+                g.append("text")
+                    .attr("x", width / 2)
+                    .attr("y", height + 45)
+                    .attr("text-anchor", "middle")
+                    .style("fill", "#ffffff")
+                    .style("font-family", "'IBM Plex Mono', monospace")
+                    .style("font-size", "16px")
+                    .text("Ano de Observação");
+
+                // Legenda do Eixo Y
+                g.append("text")
+                    .attr("transform", "rotate(-90)")
+                    .attr("y", -60)
+                    .attr("x", -height / 2)
+                    .attr("text-anchor", "middle")
+                    .style("fill", "#ffffff")
+                    .style("font-family", "'IBM Plex Mono', monospace")
+                    .style("font-size", "16px")
+                    .text("Anomalia de Temperatura (°C)");
+
+                const linhaDados = d3.line().x(d=>x(d.ano)).y(d=>y(d.anomalia)).curve(d3.curveMonotoneX);
+                const linhaMedia = d3.line().x(d=>x(d.ano)).y(d=>y(d.mediaMovel)).curve(d3.curveMonotoneX);
+
+                g.append("path").datum(dados).attr("fill","none").attr("stroke","#ff4757").attr("stroke-width",2.5).attr("d",linhaDados);
+                g.append("path").datum(dadosMedia).attr("fill","none").attr("stroke","#00d9ff").attr("stroke-width",3).attr("stroke-dasharray","8,4").attr("d",linhaMedia);
+
+                // Tooltip
+                const tooltip = d3.select(".tooltip");
+                const focusCircle = g.append("circle").attr("r",6).attr("fill","#ff4757").attr("stroke","white").attr("stroke-width",2).style("display","none");
+                const focusLine = g.append("line").attr("stroke","rgba(255,71,87,0.4)").attr("stroke-width",2).attr("stroke-dasharray","4,4").style("display","none");
+
+                const overlay = g.append("rect").attr("width",width).attr("height",height).attr("fill","none").attr("pointer-events","all");
+
+                const bisector = d3.bisector(d=>d.ano).left;
+
+                const legenda = g.append("g")
+                    .attr("transform", `translate(20, -20)`); // Posiciona acima do gráfico
+
+                // Item: Anomalia Anual
+                legenda.append("line")
+                    .attr("x1", 0).attr("x2", 20)
+                    .attr("y1", 0).attr("y2", 0)
+                    .attr("stroke", "#ff4757")
+                    .attr("stroke-width", 2);
+
+                legenda.append("text")
+                    .attr("x", 25).attr("y", 5)
+                    .style("fill", "#ffffff")
+                    .style("font-size", "12px")
+                    .text("Anomalia Anual");
+
+                // Média Móvel 
+                legenda.append("line")
+                    .attr("x1", 140).attr("x2", 160)
+                    .attr("y1", 0).attr("y2", 0)
+                    .attr("stroke", "#00d9ff") 
+                    .attr("stroke-width", 3)
+                    .attr("stroke-dasharray", "4,2");
+
+                legenda.append("text")
+                    .attr("x", 165).attr("y", 5)
+                    .style("fill", "#ffffff")
+                    .style("font-size", "12px")
+                    .text("Média Móvel (5 anos)");
+
+                // Interatividade.
+                overlay.on("mousemove",function(event){
+                    const [mx] = d3.pointer(event);
+                    const ano = x.invert(mx);
+                    const i = bisector(dados,ano);
+                    const d = dados[i];
+                    if(!d) return;
+                    focusCircle.style("display","block").attr("cx",x(d.ano)).attr("cy",y(d.anomalia));
+                    focusLine.style("display","block").attr("x1",x(d.ano)).attr("x2",x(d.ano)).attr("y1",0).attr("y2",height);
+                    tooltip.style("opacity",1).style("left",(event.pageX+20)+"px").style("top",(event.pageY-40)+"px")
+                    .html(`
+                        <div class="tooltip-year">Ano: ${d.ano}</div>
+                        <div class="tooltip-value">${d.anomalia>0?'+':''}${d.anomalia.toFixed(2)}°C</div>
+                            <div class="tooltip-label">Anomalia anual</div>
+                        `);
+                    })
+                    .on("mouseout",function(){ focusCircle.style("display","none"); focusLine.style("display","none"); tooltip.style("opacity",0); });
+            });
+        </script>
+    </body>
+</html>

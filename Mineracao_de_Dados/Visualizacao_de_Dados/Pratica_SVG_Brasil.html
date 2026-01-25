@@ -1,19 +1,46 @@
 <!DOCTYPE html>
-<html>
-  <body>
-    <svg width="350" height="245">  
-      <!-- Retângulo verde -->
-      <rect width="350" height="245" fill="#009C3B" />
-
-      <!-- Losango amarelo -->
-      <polygon
-        points="175,24.5 332.5,122.5 175,220.5 17.5,122.5"
-        fill="#FFDF00"
-      />
-
-      <!-- Círculo azul central -->
-      <circle cx="175" cy="122.5" r="61.25" fill="#002776" />
-      
-    </svg>
-  </body>
+<html lang="pt-BR">
+<head>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .copyright {
+            margin-top: 30px;
+            font-family: Helvetica, sans-serif;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <svg width="350" height="245">  
+            <!-- Retângulo verde -->
+            <rect width="350" height="245" fill="#009C3B" />
+            <!-- Losango amarelo -->
+            <polygon
+                points="175,24.5 332.5,122.5 175,220.5 17.5,122.5"
+                fill="#FFDF00"
+            />
+            <!-- Círculo azul central -->
+            <circle cx="175" cy="122.5" r="61.25" fill="#002776" />
+        </svg>
+        
+        <!-- Copyright embaixo -->
+        <div class="copyright">
+            Tony Esaú © Direitos Reservados
+        </div>
+    </div>
+</body>
 </html>

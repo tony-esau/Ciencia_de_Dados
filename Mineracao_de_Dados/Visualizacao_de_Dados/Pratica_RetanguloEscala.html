@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <!-- Centralização da Figura. -->
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .copyright {
+            margin-top: 30px;
+            font-family: Helvetica, sans-serif;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Plano normalizado 0 0 1 1. -->
+        <svg width="500" height="500" viewBox="0 0 1 1">
+            <!-- Grid -->
+            <defs>
+                <!-- 
+                    Padrão: dividir o SVG em grid com retângulos 10 x 10 (10%).
+                    patterUnits: sistema de coordenadas do usuário.
+                -->
+                <pattern id="grid" width="0.1" height="0.1" patternUnits="userSpaceOnUse">
+                    <rect width="0.1" height="0.1" fill="none" stroke="#d4a574" stroke-width="0.002"/>
+                </pattern>
+            </defs>
+
+            <!-- Cria um retângulo de 1x1 (tela inteira) e aplica o padrão. -->
+            <rect width="1" height="1" fill="url(#grid)"/>
+            
+            <!-- Borda. -->
+            <rect width="1" height="1" fill="none" stroke="#b8860b" stroke-width="0.009"/>
+            
+            <text x="0.05" y="0.085" font-size="0.05" font-family="Helvetica">(0,1)</text>
+            <text x="0.85" y="0.085" font-size="0.05" font-family="Helvetica">(1,1)</text>
+            <text x="0.05" y="0.95" font-size="0.05" font-family="Helvetica">(0,0)</text>
+            <text x="0.85" y="0.95" font-size="0.05" font-family="Helvetica">(1,0)</text>
+            
+            <!-- Retângulo. -->
+            <rect x=0.3 y=0.2 width="0.4" height="0.6" fill="#6BDADB" stroke="black" stroke-width="0.005"></rect>
+            <!-- Ponto (3,2). -->
+            <circle cx=0.3 cy=0.2 r=0.01 fill="black" stroke="black" stroke-width="0.00095"/>
+        </svg>
+        
+        <div class="copyright">
+            Tony Esaú © Direitos Reservados
+        </div>
+    </div>
+</body>
+</html>

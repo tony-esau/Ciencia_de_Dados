@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gráfico de Dispersão - D3.js</title>
+    <!-- D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script> 
+    <!-- CSS no corpo --> 
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 80vh;
+            margin: 0;
+        }
+        
+        h1 {
+            text-align: center;
+        }
+    
+        .dot {
+            fill: steelblue;
+        }
+         /*Ao passar o apontador.*/
+        .dot:hover {
+            fill: orange;
+        }
+
+        #chart{
+            background-color: #f0f0f0;
+        }
+
+        /*Pequena apresentação da coordenadas de um ponto com tooltip.*/
+        .tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+    </style>
+</head>
+<body>
+    <h2>Gráfico de Dispersão</h2>
+    <div id="chart"></div>
+    <script src="script.js"></script>
+    <div style="margin-top:2rem; font-size:0.875rem; color:#90a4ae;">
+        <center>Tony Esaú © Direitos Reservados</center>
+    </div>
+</body>
+</html>

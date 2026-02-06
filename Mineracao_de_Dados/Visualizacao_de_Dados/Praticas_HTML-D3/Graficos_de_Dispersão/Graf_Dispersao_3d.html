@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<!-- 
+    Autor: Tony Esaú de Oliveira.
+    Descrição: esse projeto faz parte das práticas de aprendizado da Tecnologia D3.js associado ao curso de
+     Visualização de Dados da Universidade de Illinois.
+-->
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Gráfico Tridimensional</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        
+        #chart {
+            background: rgb(240, 240, 240);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .dot {
+            fill: rgb(15, 111, 190);
+            cursor: pointer;
+        }
+        
+        .dot:hover {
+            fill: orange;
+            stroke-width: 2px;
+        }
+        
+        .axis-line {
+            stroke-width: 3;
+            stroke: black;
+            fill: none;
+        }
+        
+        .axis-label {
+            font-size: 16px;
+            font-weight: bold;
+            fill: black;
+        }
+        
+        .grid-line {
+            stroke: #e0e0e0;
+            stroke-width: 1;
+        }
+        
+        .projection-line {
+            stroke-width: 1;
+            stroke-dasharray: 5,5;
+            fill: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .projection-line.active {
+            opacity: 0.8;
+        }
+        
+        .projection-point {
+            opacity: 0;
+            transition: opacity 0.2s;
+            stroke: #fff;
+            stroke-width: 1;
+        }
+        
+        .projection-point.active {
+            opacity: 1;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px 9px;
+            border-radius: 4px;
+            font-size: 9px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .controls {
+            margin: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .controls label {
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        
+        .controls input {
+            margin: 0 20px 0 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Gráfico de Dispersão - Espaço Cartesiano</h1>
+    
+    <div class="controls">
+        <label>Rotação X: <input type="range" id="rotX" min="0" max="360" value="283"> <span id="rotXVal">283°</span></label>
+        <label>Rotação Z: <input type="range" id="rotZ" min="0" max="360" value="338"> <span id="rotZVal">338°</span></label>
+        <label>Zoom: <input type="range" id="zoom" min="50" max="500" value="100"> <span id="zoomVal">100%</span></label>
+    </div>
+    
+    <div id="chart"></div>
+    <script src="script_disp3d.js"></script>
+    <div style="margin-top:2rem; font-size:0.875rem; color:#90a4ae;">
+        <center>Tony Esaú © Direitos Reservados</center>
+    </div>
+</body>
+</html>

@@ -1,4 +1,4 @@
-// Pontos no plano cartesiano.
+// 1. Pontos no plano cartesiano.
 const dados = [
     {x: 10, y: 20},
     {x: 20, y: 35},

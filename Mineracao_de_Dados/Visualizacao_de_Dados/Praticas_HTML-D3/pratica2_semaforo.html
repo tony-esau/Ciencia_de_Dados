@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Semáforo</title>
+        <script src="https://d3js.org/d3.v7.min.js"></script>
+    </head>
+    <style>
+        body{
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin-top: 25px;
+            background-color: #f0f0f0;
+        }
+    </style>
+    <body>
+        <!-- Vamos fazer uma figura de semáforo -->
+        <svg width="320" height="400">  
+            <!-- Retângulo base -->
+            <rect x="125" y="0" width="50" height="90" fill="black" rx="6" ry="6">
+            </rect>
+            <!-- Sinais -->
+            <circle cx="150" cy="20" r="10" fill="#590e01" stroke="white" stroke-width="0.5" >
+            </circle>
+            <circle cx="150" cy="45" r="10" fill="#576702" stroke="white" stroke-width="0.5">
+            </circle>
+            <circle cx="150" cy="70" r="10" fill="#17e217" stroke="white" stroke-width="0.5">
+            </circle>
+            <!-- Poste do semáforo -->
+            <line x1="175" y1="45" x2="230" y2="45" stroke="rgb(110, 110, 110)" stroke-width="15">
+            </line>
+            <circle cx="230" cy="45" r="7" fill="rgb(110, 110, 110)">
+            </circle>
+            <line x1="230" y1="45" x2="290" y2="90" stroke="rgb(110, 110, 110)" stroke-width="15">
+            </line>
+            <circle cx="290" cy="90" r="7" fill="rgb(110, 110, 110)">
+            </circle>
+            <!-- Sombra -->
+            <ellipse cx="290" cy="390" rx="20" ry="7" fill="black">
+            </ellipse>
+            <ellipse cx="290" cy="389" rx="7" ry="5" fill="rgb(110, 110, 110)">
+            </ellipse>
+            <line x1="290" y1="90" x2="290" y2="390" stroke="rgb(110, 110, 110)" stroke-width="15">
+            </line>
+        </svg>
+        <div style="margin-top:2rem; font-size:0.875rem; color:#90a4ae;">
+            <center>Tony Esaú © Direitos Reservados</center>
+        </div>
+    </body>
+</html>

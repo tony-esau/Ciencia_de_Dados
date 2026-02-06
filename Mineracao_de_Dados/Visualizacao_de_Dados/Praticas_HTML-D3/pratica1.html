@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Prática de D3.js</title>
+        <script src="https://d3js.org/d3.v7.min.js"></script>
+    </head>
+    <style>
+        .svg{
+            background-color: rgb(211, 211, 211);
+        }
+    </style>
+    <body>
+        <!-- 
+            Criando um SVG diretamente no HTML, é possível fazer isso, mas, normalmente, se 
+            cria no script usando o D3 para associar uma div ao SVG.
+        -->
+        <svg class="svg" width="300" height="300" >
+            <!-- 
+                circle:
+                * cx e cy são as coordenadas da posição do centro do círculo.
+                * r é o raio.
+                * fill : preenchimento.
+                * stroke[stroke-width]: borda.
+            -->
+            <circle cx="50" cy="30" r="20" fill="blue" stroke="black" stroke-width="5">
+            </circle>
+            <circle cx="50" cy="70" r="30" fill="blue" stroke="black" stroke-width="5">
+            </circle>
+            <!-- 
+                rect:
+                * x e y são as posições iniciais do ponto superior esquerdo do retângulo.
+                * width: largura (Cresce à direita).
+                * height: altura (Cresce para baixo).
+                * stroke[stroke-width]: borda.
+                * rx/ry: arrendondar borda.
+            -->
+            <rect x="20" y="120" width="40" height="90" rx="10" ry="10">
+            </rect>
+            <!-- 
+                line:
+                * funciona com pontos sucessivos.
+                * stroke: defina a cor da linha.
+                * stroke-width: defina a largura.
+            -->
+            <line x1="20" y1="250" x2="20" y2="290" stroke="orange" stroke-width="1">
+            </line>
+            <!-- 
+                ellipse:
+                * cx e cy são as coordenadas da posição do centro da elipse.
+                * rx/ry: é a configuração dos eixos (menor/maior) da elipse.
+                * fill : preenchimento.
+            -->
+            <ellipse cx="40" cy="275" rx="10" ry="25" fill="red">
+            </ellipse>
+        </svg>
+        <div style="margin-top:2rem; font-size:0.875rem; color:#545454;">
+           Tony Esaú © Direitos Reservados
+        </div>
+    </body>
+</html>

@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<!-- 
+    Autor: Tony Esaú de Oliveira.
+    Universidade Federal do Cariri.
+    Descrição: esse projeto faz parte das práticas de aprendizado da Tecnologia D3.js associado ao curso de
+    Visualização de Dados da Universidade de Illinois.
+-->
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Scatter 3D + Coordenadas Paralelas</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 145vh;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        svg {
+            background: #f0f0f0;
+            border-radius: 8px;
+        }
+
+        .dot {
+            cursor: pointer;
+            transition: r 0.2s, fill 0.2s;
+        }
+
+        .parallel-line {
+            fill: none;
+            stroke-width: 2;
+            cursor: pointer;
+            transition: stroke 0.2s, stroke-width 0.2s, opacity 0.2s;
+        }
+
+        .axis-line {
+            stroke-width: 3;
+            stroke: black;
+            fill: none;
+        }
+
+        .axis-label {
+            font-size: 16px;
+            font-weight: bold;
+            fill: black;
+        }
+
+        .grid-line {
+            stroke: #e0e0e0;
+            stroke-width: 1;
+        }
+
+        .projection-line {
+            stroke-width: 1;
+            stroke-dasharray: 5,5;
+            fill: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .projection-line.active {
+            opacity: 0.8;
+        }
+
+        .projection-point {
+            opacity: 0;
+            transition: opacity 0.2s;
+            stroke: #fff;
+            stroke-width: 1;
+        }
+
+        .projection-point.active {
+            opacity: 1;
+        }
+
+        .highlight {
+            stroke-width: 3 !important;
+            opacity: 1 !important;
+        }
+
+        .dim {
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div>
+        <h2>Gráfico de Dispersão - Espaço Cartesiano</h2>
+        <div id="chart3d"></div>
+    </div>
+
+    <div>
+        <h2>Coordenadas Paralelas</h2>
+        <div id="parallel"></div>
+    </div>
+
+    <div style="margin-top:1rem; font-size:0.875rem; color:#90a4ae;">
+        <center>Tony Esaú © Direitos Reservados</center>
+    </div>
+</div>
+    <script>
+        // Pontos e suas cores.
+        const dados = [
+            {id: 0, x: 10, y: 20, z: 15, color: "#1f77b4"}, // azul
+            {id: 1, x: 20, y: 35, z: 25, color: "#ff7f0e"}, // laranja
+            {id: 2, x: 30, y: 25, z: 40, color: "#2ca02c"}, // verde
+            {id: 3, x: 40, y: 50, z: 30, color: "#d62728"}, // vermelho
+            {id: 4, x: 50, y: 45, z: 55, color: "#9467bd"}, // roxo
+            {id: 5, x: 60, y: 60, z: 50, color: "#8c564b"}  // marrom
+        ];
+
+        // Inicializando o gráfico.
+        const margin3D = {top: 40, right: 40, bottom: 40, left: 40};
+        const width3D = 600 - margin3D.left - margin3D.right;
+        const height3D = 400 - margin3D.top - margin3D.bottom;
+
+        const svg3D = d3.select("#chart3d")
+            .append("svg")
+            .attr("width", width3D + margin3D.left + margin3D.right)
+            .attr("height", height3D + margin3D.top + margin3D.bottom)
+            .append("g")
+            .attr("transform", `translate(${margin3D.left}, ${margin3D.top})`);
+
+        // Grupos.
+        const gridGroup = svg3D.append("g").attr("class", "grid");
+        const axisGroup = svg3D.append("g").attr("class", "axes");
+        const projectionsGroup = svg3D.append("g").attr("class", "projections");
+        const pointsGroup = svg3D.append("g").attr("class", "points");
+
+        // Normalizações para plotagem na tela.
+        function getNormalizationScales() {
+            const minX = d3.min(dados, d => d.x);
+            const maxX = d3.max(dados, d => d.x);
+            const minY = d3.min(dados, d => d.y);
+            const maxY = d3.max(dados, d => d.y);
+            const minZ = d3.min(dados, d => d.z);
+            const maxZ = d3.max(dados, d => d.z);
+
+            const rangeX = Math.max(Math.abs(minX), Math.abs(maxX));
+            const rangeY = Math.max(Math.abs(minY), Math.abs(maxY));
+
+            const maxRange = Math.max(rangeX, rangeY);
+            const axisLength = 200;
+
+            return {
+                normX: d3.scaleLinear().domain([-maxRange, maxRange]).range([-axisLength, axisLength]),
+                normY: d3.scaleLinear().domain([-maxRange, maxRange]).range([-axisLength, axisLength]),
+                normZ: d3.scaleLinear().domain([0, maxZ]).range([0, axisLength]),
+                maxRange,
+                axisLength,
+                maxZ
+            };
+        }
+
+        let scales = getNormalizationScales();
+        let normX = scales.normX;
+        let normY = scales.normY;
+        let normZ = scales.normZ;
+
+        // Ângulo fixo de visualização.
+        const angleX = 283 * Math.PI / 180;
+        const angleZ = 338 * Math.PI / 180;
+        const scale = 1;
+
+        function project3D(x, y, z) {
+            const x1 = x * Math.cos(angleZ) - y * Math.sin(angleZ);
+            const y1 = x * Math.sin(angleZ) + y * Math.cos(angleZ);
+
+            const y2 = y1 * Math.cos(angleX) - z * Math.sin(angleX);
+            const z2 = y1 * Math.sin(angleX) + z * Math.cos(angleX);
+
+            return {
+                x: x1 * scale,
+                y: -y2 * scale,
+                z: z2
+            };
+        }
+
+        // Calcula o offset de centralização baseado em todos os elementos
+        function calculateCenterOffset() {
+            const allPoints = [];
+            const axisLength = scales.axisLength + 20;
+            
+            // Coleta todos os pontos importantes (eixos X e Y completos)
+            [-axisLength, axisLength].forEach(val => {
+                allPoints.push(project3D(val, 0, 0));
+                allPoints.push(project3D(0, val, 0));
+            });
+            
+            // Eixo Z apenas positivo (de 0 até o máximo)
+            allPoints.push(project3D(0, 0, 0));
+            allPoints.push(project3D(0, 0, axisLength));
+            
+            dados.forEach(d => {
+                allPoints.push(project3D(
+                    normX(d.x),
+                    normY(d.y),
+                    normZ(d.z)
+                ));
+            });
+
+            const xs = allPoints.map(p => p.x);
+            const ys = allPoints.map(p => p.y);
+
+            const minX = d3.min(xs);
+            const maxX = d3.max(xs);
+            const minY = d3.min(ys);
+            const maxY = d3.max(ys);
+
+            // Centraliza considerando as dimensões do SVG
+            const contentWidth = maxX - minX;
+            const contentHeight = maxY - minY;
+            
+            return {
+                dx: (width3D - contentWidth) / 2 - minX,
+                dy: (height3D - contentHeight) / 2 - minY
+            };
+        }
+
+        // Malha no plano XY.
+        function drawGrid(dx = 0, dy = 0) {
+            gridGroup.selectAll("*").remove();
+
+            const axisLength = scales.axisLength;
+            const gridStep = 40;
+
+            for (let y = -axisLength; y <= axisLength; y += gridStep) {
+                const start = project3D(-axisLength, y, 0);
+                const end = project3D(axisLength, y, 0);
+
+                gridGroup.append("line")
+                    .attr("class", "grid-line")
+                    .attr("x1", start.x + dx)
+                    .attr("y1", start.y + dy)
+                    .attr("x2", end.x + dx)
+                    .attr("y2", end.y + dy);
+            }
+
+            for (let x = -axisLength; x <= axisLength; x += gridStep) {
+                const start = project3D(x, -axisLength, 0);
+                const end = project3D(x, axisLength, 0);
+
+                gridGroup.append("line")
+                    .attr("class", "grid-line")
+                    .attr("x1", start.x + dx)
+                    .attr("y1", start.y + dy)
+                    .attr("x2", end.x + dx)
+                    .attr("y2", end.y + dy);
+            }
+        }
+
+        // Desenho dos eixos.
+        function drawAxes(dx = 0, dy = 0) {
+            axisGroup.selectAll("*").remove();
+
+            const axisLength = scales.axisLength + 20;
+
+            // Eixo X
+            const xNeg = project3D(-axisLength, 0, 0);
+            const xPos = project3D(axisLength, 0, 0);
+            axisGroup.append("line")
+                .attr("class", "axis-line")
+                .attr("x1", xNeg.x + dx)
+                .attr("y1", xNeg.y + dy)
+                .attr("x2", xPos.x + dx)
+                .attr("y2", xPos.y + dy);
+
+            axisGroup.append("text")
+                .attr("class", "axis-label")
+                .attr("x", xPos.x + dx + 15)
+                .attr("y", xPos.y + dy + 5)
+                .text("X");
+
+            // Eixo Y
+            const yNeg = project3D(0, -axisLength, 0);
+            const yPos = project3D(0, axisLength, 0);
+            axisGroup.append("line")
+                .attr("class", "axis-line")
+                .attr("x1", yNeg.x + dx)
+                .attr("y1", yNeg.y + dy)
+                .attr("x2", yPos.x + dx)
+                .attr("y2", yPos.y + dy);
+
+            axisGroup.append("text")
+                .attr("class", "axis-label")
+                .attr("x", yPos.x + dx + 15)
+                .attr("y", yPos.y + dy + 5)
+                .text("Y");
+
+            // Eixo Z apenas positivo (de 0 até o máximo)
+            const zOrigin = project3D(0, 0, 0);
+            const zPos = project3D(0, 0, axisLength);
+            axisGroup.append("line")
+                .attr("class", "axis-line")
+                .attr("x1", zOrigin.x + dx)
+                .attr("y1", zOrigin.y + dy)
+                .attr("x2", zPos.x + dx)
+                .attr("y2", zPos.y + dy);
+
+            axisGroup.append("text")
+                .attr("class", "axis-label")
+                .attr("x", zPos.x + dx + 10)
+                .attr("y", zPos.y + dy - 10)
+                .text("Z");
+
+            drawAxisMarkers(dx, dy);
+        }
+
+        // Desenho dos marcadores (ticks).
+        function drawAxisMarkers(dx = 0, dy = 0) {
+            const numMarkers = 5;
+            const markerRadius = 2.5;
+            const maxRange = scales.maxRange;
+            const step = maxRange / numMarkers;
+
+            // Marcadores para X e Y (negativos e positivos)
+            for (let i = -numMarkers; i <= numMarkers; i++) {
+                if (i === 0) continue;
+
+                let value = step * i;
+                let pos = normX(value);
+
+                let pX = project3D(pos, 0, 0);
+                axisGroup.append("circle")
+                    .attr("cx", pX.x + dx)
+                    .attr("cy", pX.y + dy)
+                    .attr("r", markerRadius)
+                    .attr("fill", "black");
+
+                let pY = project3D(0, pos, 0);
+                axisGroup.append("circle")
+                    .attr("cx", pY.x + dx)
+                    .attr("cy", pY.y + dy)
+                    .attr("r", markerRadius)
+                    .attr("fill", "black");
+            }
+
+            // Marcadores para Z (apenas positivos)
+            const maxZ = scales.maxZ;
+            const stepZ = maxZ / numMarkers;
+            for (let i = 1; i <= numMarkers; i++) {
+                let value = stepZ * i;
+                let pos = normZ(value);
+
+                let pZ = project3D(0, 0, pos);
+                axisGroup.append("circle")
+                    .attr("cx", pZ.x + dx)
+                    .attr("cy", pZ.y + dy)
+                    .attr("r", markerRadius)
+                    .attr("fill", "black");
+            }
+        }
+        // Projeções Ortogonais.
+        function createProjectionLines(d, dx = 0, dy = 0) {
+            projectionsGroup.selectAll("*").remove();
+
+            const sx = normX(d.x);
+            const sy = normY(d.y);
+            const sz = normZ(d.z);
+
+            const point = project3D(sx, sy, sz);
+
+            const basePoint = project3D(sx, sy, 0);
+            const xAxisPoint = project3D(sx, 0, 0);
+            const yAxisPoint = project3D(0, sy, 0);
+            const zAxisPoint = project3D(0, 0, sz);
+            const zBasePoint = project3D(0, 0, sz);
+
+            // Linha da altura (eixo Z até o ponto).
+            projectionsGroup.append("line")
+                .attr("class", "projection-line active")
+                .attr("x1", zBasePoint.x + dx)
+                .attr("y1", zBasePoint.y + dy)
+                .attr("x2", point.x + dx)
+                .attr("y2", point.y + dy)
+                .attr("stroke", "#555");
+
+            // Linha no plano XY (do ponto ao plano).
+            projectionsGroup.append("line")
+                .attr("class", "projection-line active")
+                .attr("x1", point.x + dx)
+                .attr("y1", point.y + dy)
+                .attr("x2", basePoint.x + dx)
+                .attr("y2", basePoint.y + dy)
+                .attr("stroke", "#555");
+
+            // Projeção no eixo X.
+            projectionsGroup.append("line")
+                .attr("class", "projection-line active")
+                .attr("x1", basePoint.x + dx)
+                .attr("y1", basePoint.y + dy)
+                .attr("x2", xAxisPoint.x + dx)
+                .attr("y2", xAxisPoint.y + dy)
+                .attr("stroke", "#555");
+
+            // Projeção no eixo Y.
+            projectionsGroup.append("line")
+                .attr("class", "projection-line active")
+                .attr("x1", basePoint.x + dx)
+                .attr("y1", basePoint.y + dy)
+                .attr("x2", yAxisPoint.x + dx)
+                .attr("y2", yAxisPoint.y + dy)
+                .attr("stroke", "#555");
+
+            // Pontos projetados.
+            projectionsGroup.append("circle")
+                .attr("class", "projection-point active")
+                .attr("cx", basePoint.x + dx)
+                .attr("cy", basePoint.y + dy)
+                .attr("r", 3.5)
+                .attr("fill", "#333");
+
+            projectionsGroup.append("circle")
+                .attr("class", "projection-point active")
+                .attr("cx", xAxisPoint.x + dx)
+                .attr("cy", xAxisPoint.y + dy)
+                .attr("r", 3.5)
+                .attr("fill", "#e14747");
+
+            projectionsGroup.append("circle")
+                .attr("class", "projection-point active")
+                .attr("cx", yAxisPoint.x + dx)
+                .attr("cy", yAxisPoint.y + dy)
+                .attr("r", 3.5)
+                .attr("fill", "#e14747");
+
+            projectionsGroup.append("circle")
+                .attr("class", "projection-point active")
+                .attr("cx", zAxisPoint.x + dx)
+                .attr("cy", zAxisPoint.y + dy)
+                .attr("r", 3.5)
+                .attr("fill", "#e14747");
+        }
+
+        function clearProjectionLines() {
+            projectionsGroup.selectAll("*").remove();
+        }
+
+        // Pontos no espaço.
+        function drawPoints(dx = 0, dy = 0) {
+            const processedData = dados.map(d => {
+                const projected = project3D(
+                    normX(d.x),
+                    normY(d.y),
+                    normZ(d.z)
+                );
+                return {
+                    ...d,
+                    px: projected.x + dx,
+                    py: projected.y + dy,
+                    pz: projected.z
+                };
+            });
+
+            processedData.sort((a, b) => a.pz - b.pz);
+
+            const dots = pointsGroup.selectAll(".dot")
+                .data(processedData, d => d.id);
+
+            dots.exit().remove();
+
+            const dotsEnter = dots.enter()
+                .append("circle")
+                .attr("class", "dot")
+                .attr("r", 4)
+                .attr("fill", d => d.color);
+
+            dots.merge(dotsEnter)
+                .attr("cx", d => d.px)
+                .attr("cy", d => d.py)
+                .on("mouseover", (event, d) => {
+                    d3.select(event.currentTarget).attr("r", 6);
+                    createProjectionLines(d, dx, dy);
+                    highlight(d.id);
+                })
+                .on("mouseout", (event, d) => {
+                    d3.select(event.currentTarget).attr("r", 4);
+                    clearProjectionLines();
+                    clearHighlight();
+                });
+        }
+
+        // Atualização estática.
+        function update3D() {
+            scales = getNormalizationScales();
+            normX = scales.normX;
+            normY = scales.normY;
+            normZ = scales.normZ;
+
+            // Calcula o offset de centralização
+            const offset = calculateCenterOffset();
+
+            // Desenha tudo com o offset correto
+            drawGrid(offset.dx, offset.dy);
+            drawAxes(offset.dx, offset.dy);
+            drawPoints(offset.dx, offset.dy);
+        }
+
+        // Coordenadas Paralelas.
+        const marginP = {top: 40, right: 30, bottom: 40, left: 50};
+        const widthP = 600 - marginP.left - marginP.right;
+        const heightP = 340 - marginP.top - marginP.bottom;
+
+        const svgParallel = d3.select("#parallel")
+            .append("svg")
+            .attr("width", widthP + marginP.left + marginP.right)
+            .attr("height", heightP + marginP.top + marginP.bottom)
+            .append("g")
+            .attr("transform", `translate(${marginP.left},${marginP.top})`);
+
+        const dimensoes = ["x", "y", "z"];
+
+        const xScaleParallel = d3.scalePoint()
+            .domain(dimensoes)
+            .range([0, widthP]);
+
+        const yScales = {
+            x: d3.scaleLinear()
+                .domain([0, d3.max(dados, d => d.x)])
+                .range([heightP, 0]),
+            y: d3.scaleLinear()
+                .domain([0, d3.max(dados, d => d.y)])
+                .range([heightP, 0]),
+            z: d3.scaleLinear()
+                .domain([0, d3.max(dados, d => d.z)])
+                .range([heightP, 0])
+        };
+
+        // Eixos das paralelas.
+        svgParallel.selectAll(".axis")
+            .data(dimensoes)
+            .enter()
+            .append("g")
+            .attr("class", "axis")
+            .attr("transform", d => `translate(${xScaleParallel(d)},0)`)
+            .each(function(d) {
+                d3.select(this).call(d3.axisLeft(yScales[d]));
+            })
+            .append("text")
+            .style("text-anchor", "middle")
+            .attr("y", -10)
+            .attr("fill", "black")
+            .text(d => d.toUpperCase());
+
+        // Gerador de linha.
+        const line = d3.line()
+            .x(d => xScaleParallel(d.dimension))
+            .y(d => yScales[d.dimension](d.value));
+
+        // Linhas das paralelas.
+        const linhas = svgParallel.selectAll(".parallel-line")
+            .data(dados)
+            .enter()
+            .append("path")
+            .attr("class", "parallel-line")
+            .attr("d", d => line([
+                {dimension: "x", value: d.x},
+                {dimension: "y", value: d.y},
+                {dimension: "z", value: d.z}
+            ]))
+            .attr("stroke", d => d.color)
+            .on("mouseover", (event, d) => highlight(d.id))
+            .on("mouseout", clearHighlight);
+
+        // Interação cruzada.
+        function highlight(id) {
+            pointsGroup.selectAll(".dot")
+                .classed("dim", d => d.id !== id)
+                .classed("highlight", d => d.id === id)
+                .attr("r", d => d.id === id ? 6 : 4);
+
+            linhas.classed("dim", d => d.id !== id)
+                .classed("highlight", d => d.id === id);
+        }
+
+        function clearHighlight() {
+            pointsGroup.selectAll(".dot")
+                .classed("dim", false)
+                .classed("highlight", false)
+                .attr("r", 4);
+
+            linhas.classed("dim", false)
+                .classed("highlight", false);
+        }
+
+        //Inicialização.
+        update3D();
+    </script>
+</body>
+</html>

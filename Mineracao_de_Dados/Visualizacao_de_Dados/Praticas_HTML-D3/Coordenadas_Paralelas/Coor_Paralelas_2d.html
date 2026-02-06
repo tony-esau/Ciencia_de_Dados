@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<!-- 
+    Autor: Tony Esaú de Oliveira.
+    Univeridade Federal do Cariri.
+    Descrição: esse projeto faz parte das práticas de aprendizado da Tecnologia D3.js associado ao curso de
+    Visualização de Dados da Universidade de Illinois.
+-->
+<head>
+    <meta charset="UTF-8">
+    <title>Scatter + Coordenadas Paralelas</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 105vh; /*Distância da borda acima*/
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        #parallel svg {
+            background: #f4f4f4;
+            border-radius: 5px;
+        }
+
+        #scatter svg {
+            background-color: #f4f4f4;
+            border-radius: 5px;
+        }   
+
+        .grid line {
+            stroke: #ccc;
+            stroke-opacity: 0.6;
+            shape-rendering: crispEdges;
+        }
+
+        .grid path {
+            stroke-width: 0;
+        }
+
+        .point {
+            cursor: pointer;
+            transition: r 0.2s, fill 0.2s;
+        }
+
+        .parallel-line {
+            fill: none;
+            stroke-width: 2;
+            cursor: pointer;
+            transition: stroke 0.2s, stroke-width 0.2s;
+        }
+
+        .highlight {
+            stroke-width: 3.5 !important;
+            opacity: 1 !important;
+        }
+
+        .dim {
+            opacity: 0.3;
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div>
+            <h2>Gráfico de Dispersão - 2D</h2>
+            <div id="scatter"></div>
+        </div>
+
+        <div>
+            <h2>Coordenadas Paralelas</h2>
+            <div id="parallel"></div>
+        </div>
+
+        <div style="margin-top:2rem; font-size:0.875rem; color:#90a4ae;">
+            <center>Tony Esaú © Direitos Reservados</center>
+        </div>
+    </div>
+    <script>
+        // Seis pontos distintos.
+        const dados = [
+            {id: 0, x: 10, y: 20, color: "#1f77b4"}, // Azul.
+            {id: 1, x: 20, y: 35, color: "#ff7f0e"}, // Laranja.
+            {id: 2, x: 30, y: 25, color: "#2ca02c"}, // Verde.
+            {id: 3, x: 40, y: 50, color: "#d62728"}, // Vermelho.
+            {id: 4, x: 50, y: 45, color: "#9467bd"}, // Roxo.
+            {id: 5, x: 60, y: 60, color: "#8c564b"}  // Marrom.
+        ];
+
+        // Gráfico de Dispersão.
+        const marginS = {top: 20, right: 30, bottom: 40, left: 50};
+        const widthS = 500 - marginS.left - marginS.right;
+        const heightS = 300 - marginS.top - marginS.bottom;
+
+        const svgScatter = d3.select("#scatter")
+            .append("svg")
+            .attr("width", widthS + marginS.left + marginS.right)
+            .attr("height", heightS + marginS.top + marginS.bottom)
+            .append("g")
+            .attr("transform", `translate(${marginS.left},${marginS.top})`);
+
+        const escalaX = d3.scaleLinear()
+            .domain([0, d3.max(dados, d => d.x)])
+            .range([0, widthS]);
+
+        const escalaY = d3.scaleLinear()
+            .domain([0, d3.max(dados, d => d.y)])
+            .range([heightS, 0]);
+
+        const gridX = d3.axisBottom(escalaX)
+            .ticks(10)
+            .tickSize(-heightS)
+            .tickFormat("");
+
+        const gridY = d3.axisLeft(escalaY)
+            .ticks(10)
+            .tickSize(-widthS)
+            .tickFormat("");
+
+        // Grid vertical.
+        svgScatter.append("g")
+            .attr("class", "grid")
+            .attr("transform", `translate(0,${heightS})`)
+            .call(gridX);
+
+        // Grid horizontal.
+        svgScatter.append("g")
+            .attr("class", "grid")
+            .call(gridY);
+
+        svgScatter.append("g")
+            .attr("transform", `translate(0,${heightS})`)
+            .call(d3.axisBottom(escalaX));
+
+        svgScatter.append("g")
+            .call(d3.axisLeft(escalaY));
+
+        const pontos = svgScatter.selectAll(".point")
+            .data(dados)
+            .enter()
+            .append("circle")
+            .attr("class", "point")
+            .attr("cx", d => escalaX(d.x))
+            .attr("cy", d => escalaY(d.y))
+            .attr("r", 5)
+            .attr("fill", d => d.color)
+            .on("mouseover", (event, d) => highlight(d.id))
+            .on("mouseout", clearHighlight);
+
+        // Coordenadas Paralelas.
+        const marginP = {top: 40, right: 30, bottom: 20, left: 50};
+        const widthP = 500 - marginP.left - marginP.right;
+        const heightP = 275 - marginP.top - marginP.bottom;
+
+        const svgParallel = d3.select("#parallel")
+            .append("svg")
+            .attr("width", widthP + marginP.left + marginP.right)
+            .attr("height", heightP + marginP.top + marginP.bottom)
+            .append("g")
+            .attr("transform", `translate(${marginP.left},${marginP.top})`);
+
+        // Dimensões.
+        const dimensoes = ["x", "y"];
+
+        const xScaleParallel = d3.scalePoint()
+            .domain(dimensoes)
+            .range([0, widthP]);
+
+        const yScales = {
+            x: d3.scaleLinear()
+                .domain([0, d3.max(dados, d => d.x)])
+                .range([heightP, 0]),
+            y: d3.scaleLinear()
+                .domain([0, d3.max(dados, d => d.y)])
+                .range([heightP, 0])
+        };
+
+        // Desenhar eixos.
+        svgParallel.selectAll(".axis")
+            .data(dimensoes)
+            .enter()
+            .append("g")
+            .attr("class", "axis")
+            .attr("transform", d => `translate(${xScaleParallel(d)},0)`)
+            .each(function(d) {
+                d3.select(this).call(d3.axisLeft(yScales[d]));
+            })
+            .append("text")
+            .style("text-anchor", "middle")
+            .attr("y", -10)
+            .attr("fill", "black")
+            .text(d => d.toUpperCase());
+
+        // Função para gerar caminho das linhas.
+        const line = d3.line()
+            .x(d => xScaleParallel(d.dimension))
+            .y(d => yScales[d.dimension](d.value));
+
+        const linhas = svgParallel.selectAll(".parallel-line")
+            .data(dados)
+            .enter()
+            .append("path")
+            .attr("class", "parallel-line")
+            .attr("d", d => line([
+                {dimension: "x", value: d.x},
+                {dimension: "y", value: d.y}
+            ]))
+            .attr("stroke", d => d.color)
+            .on("mouseover", (event, d) => highlight(d.id))
+            .on("mouseout", clearHighlight);
+
+        // Interação Cruzada.
+        function highlight(id) {
+            pontos.classed("dim", d => d.id !== id)
+                .classed("highlight", d => d.id === id)
+                .attr("r", d => d.id === id ? 7 : 5);
+
+            linhas.classed("dim", d => d.id !== id)
+                .classed("highlight", d => d.id === id);
+        }
+
+        function clearHighlight() {
+            pontos.classed("dim", false)
+                .classed("highlight", false)
+                .attr("r", 5);
+
+            linhas.classed("dim", false)
+                .classed("highlight", false);
+        }
+    </script>
+</body>
+</html>

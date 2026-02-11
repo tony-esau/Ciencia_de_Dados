@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rede de Emails - Visualização Interativa</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@500;700;900&display=swap');
+        /*
+            Algumas Cores.
+        */
+        :root {
+            --neon-cyan: #00ffff;
+            --neon-magenta: #ff00ff;
+            --neon-yellow: #ffff00;
+            --dark-bg: #0a0a0f;
+            --darker-bg: #050508;
+            --grid-color: rgba(0, 255, 255, 0.05);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--dark-bg);
+            color: var(--neon-cyan);
+            overflow: hidden;
+            cursor: crosshair;
+        }
+        
+        /* Efeito de Malha no fundo*/
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(var(--grid-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: 0;
+            pointer-events: none;
+        }
+        
+        /*Gradiente no centro*/
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(ellipse at center, rgba(10, 10, 15, 0.8) 0%, var(--darker-bg) 100%);
+        }
+        
+        svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        
+        /* Cabeçalho e seu gradiente de cor */
+        .header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 25px 40px;
+            background: linear-gradient(180deg, rgba(1, 1, 1, 0.95) 0%, transparent 100%);
+            z-index: 100;
+            border-bottom: 2px solid rgba(0, 255, 255, 0.2);
+        }
+        
+        .title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            background: linear-gradient(70deg, var(--neon-cyan), var(--neon-magenta), var(--neon-yellow));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+            animation: glow 3s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { filter: drop-shadow(0 0 5px rgba(0, 255, 255, 0.5)); }
+            to { filter: drop-shadow(0 0 20px rgba(255, 0, 255, 0.8)); }
+        }
+        
+        .subtitle {
+            font-size: 0.85rem;
+            color: rgba(0, 255, 255, 0.7);
+            margin-top: 8px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        
+        /* Painel de Status */
+        .stats {
+            position: absolute;
+            top: 140px;
+            left: 40px;
+            background: rgba(10, 10, 15, 0.85);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 255, 255, 0.15);
+            z-index: 100;
+            min-width: 280px;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 0.85rem;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.1);
+        }
+        
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+        
+        .stat-label {
+            color: rgba(0, 255, 255, 0.7);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+        }
+        
+        .stat-value {
+            color: var(--neon-magenta);
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        /* Controle */
+        .controls {
+            position: absolute;
+            bottom: 40px;
+            left: 40px;
+            display: flex;
+            gap: 15px;
+            z-index: 100;
+        }
+        
+        .control-btn {
+            background: rgba(10, 10, 15, 0.85);
+            border: 1px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+            padding: 12px 24px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            cursor: pointer;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .control-btn:hover {
+            background: var(--neon-cyan);
+            color: var(--dark-bg);
+            box-shadow: 0 0 20px var(--neon-cyan);
+            transform: translateY(-2px);
+        }
+        
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            background: rgba(10, 10, 15, 0.95);
+            border: 2px solid var(--neon-cyan);
+            border-radius: 8px;
+            padding: 15px 20px;
+            font-size: 0.85rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 255, 255, 0.3);
+            max-width: 350px;
+        }
+        
+        .tooltip.active {
+            opacity: 1;
+        }
+        
+        .tooltip-title {
+            font-weight: bold;
+            font-size: 1rem;
+            color: var(--neon-magenta);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        
+        .tooltip-content {
+            color: rgba(0, 255, 255, 0.9);
+            line-height: 1.6;
+        }
+        
+        .tooltip-highlight {
+            color: var(--neon-yellow);
+            font-weight: bold;
+        }
+        
+        /* Elementos do Grafo */
+        .link {
+            stroke-opacity: 0.4;
+            transition: stroke-opacity 0.3s, stroke-width 0.3s;
+        }
+        
+        .link:hover {
+            stroke-opacity: 0.9;
+            stroke-width: 3px;
+        }
+        
+        .node {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .node:hover {
+            filter: drop-shadow(0 0 15px currentColor);
+        }
+        
+        .node-label {
+            font-size: 11px;
+            font-weight: 500;
+            pointer-events: none;
+            text-shadow: 
+                -1px -1px 3px var(--dark-bg),
+                1px -1px 3px var(--dark-bg),
+                -1px 1px 3px var(--dark-bg),
+                1px 1px 3px var(--dark-bg);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .node:hover .node-label {
+            opacity: 1;
+        }
+        
+        /* Carregando animação */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            color: var(--neon-cyan);
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div class="header">
+            <h1 class="title">Rede de Emails-s De Epstein</h1>
+            <p class="subtitle">Tony Esaú ©</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <span class="stat-label">Total de Nós:</span>
+                <span class="stat-value" id="totalNodes">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Total de Conexões:</span>
+                <span class="stat-value" id="totalLinks">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Nó Central:</span>
+                <span class="stat-value" id="centralNode">-</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Máx. Conexões:</span>
+                <span class="stat-value" id="maxDegree">0</span>
+            </div>
+        </div>
+        <div class="controls">
+            <button class="control-btn" onclick="resetZoom()">Reset Zoom</button>
+        </div>
+        
+        <svg id="graph"></svg>
+        <div class="tooltip" id="tooltip"></div>
+    </div>
+
+    <script src="grafo_emails.js"></script>
+    <script>
+        // Configurações.
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        
+        // Criar SVG.
+        const svg = d3.select("#graph")
+            .attr("viewBox", [0, 0, width, height]);
+        
+        // Grupos para organização.
+        const g = svg.append("g");
+        const linkGroup = g.append("g").attr("class", "links");
+        const nodeGroup = g.append("g").attr("class", "nodes");
+        
+        // Comportamento de Zoom.
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 10])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+        
+        svg.call(zoom);
+        
+        // Função para resetar zoom.
+        window.resetZoom = function() {
+            svg.transition()
+                .duration(750)
+                .call(zoom.transform, d3.zoomIdentity);
+        };
+        
+        // Processar dados.
+        const nodes = grafo.vertices.map(v => ({
+            id: v.id,
+            grau: v.grau
+        }));
+        
+        // Criar mapa de nós por ID para garantir referências corretas.
+        const nodeById = new Map(nodes.map(d => [d.id, d]));
+        
+        const links = grafo.arestas.map(a => ({
+            source: a.remetente,
+            target: a.destinatario,
+            assunto: a.assunto
+        }));
+        
+        // Verificar e logar problemas de linking.
+        const problematicLinks = links.filter(l => {
+            const sourceExists = nodeById.has(l.source);
+            const targetExists = nodeById.has(l.target);
+            return !sourceExists || !targetExists;
+        });
+        
+        if (problematicLinks.length > 0) {
+            console.warn(`${problematicLinks.length} links com nós não encontrados`, problematicLinks.slice(0, 5));
+        }
+        
+        // Atualizar estatísticas.
+        document.getElementById("totalNodes").textContent = nodes.length;
+        document.getElementById("totalLinks").textContent = links.length;
+        
+        const maxDegreeNode = nodes.reduce((max, node) => 
+            node.grau > max.grau ? node : max, nodes[0]);
+        
+        document.getElementById("centralNode").textContent = maxDegreeNode.id;
+        document.getElementById("maxDegree").textContent = maxDegreeNode.grau;
+        
+        // Função para determinar cor baseada no grau (escala logarítmica).
+        function getNodeColor(grau) {
+            // Usando escala logarítmica para melhor distribuição visual
+            if (grau > 500) return "#ff0066"; // Rosa choque para o outlier (Jeffrey Epstein)
+            if (grau >= 100) return "#ff00ff"; // Magenta para top 3 (100-139)
+            if (grau >= 50) return "#cc00ff";  // Roxo para importantes (50-99)
+            if (grau >= 20) return "#6600ff";  // Roxo-azul para relevantes (20-49)
+            if (grau >= 10) return "#0099ff";  // Azul cyan para médios (10-19)
+            if (grau >= 5) return "#00cccc";   // Cyan para baixo-médio (5-9)
+            return "#00ff99"; // Verde-água para periféricos (1-4)
+        }
+        
+        // Função para determinar tamanho baseado no grau (escala logarítmica).
+        function getNodeSize(grau) {
+            // Usar log para comprimir a diferença entre 1623 e os demais.
+            const logGrau = Math.log(grau + 1);
+            const maxLogGrau = Math.log(1624); // 1623 + 1
+            
+            const minSize = 2;   
+            const maxSize = 30;  
+            
+            // Escala logarítmica suavizada.
+            const normalized = logGrau / maxLogGrau;
+            return minSize + normalized * (maxSize - minSize);
+        }
+        
+        // Criar simulação de força.
+        const simulation = d3.forceSimulation(nodes)
+            .force("link", d3.forceLink(links)
+                .id(d => d.id)
+                .distance(d => {
+                    // Distância adaptativa baseada no grau (log scale).
+                    const sourceGrau = d.source.grau || 1;
+                    const targetGrau = d.target.grau || 1;
+                    const avgGrau = (sourceGrau + targetGrau) / 2;
+                    
+                    // Distâncias médias.
+                    if (avgGrau > 100) return 160;  
+                    if (avgGrau > 50) return 150;   
+                    if (avgGrau > 20) return 190;   
+                    if (avgGrau > 10) return 225;   
+                    return 250; // Periféricos
+                })
+                .strength(d => {
+                    // Links com nós importantes são mais fortes.
+                    const sourceGrau = d.source.grau || 1;
+                    const targetGrau = d.target.grau || 1;
+                    const maxGrau = Math.max(sourceGrau, targetGrau);
+                    
+                    if (maxGrau > 100) return 0.9;
+                    if (maxGrau > 50) return 0.7;
+                    if (maxGrau > 20) return 0.5;
+                    return 0.3;
+                }))
+            .force("charge", d3.forceManyBody()
+                .strength(d => {
+                    // Repulsão moderada e proporcional ao grau.
+                    if (d.grau > 500) return -1200; // Jeffrey Epstein, forte, mas não extremo.
+                    if (d.grau > 100) return -600;
+                    if (d.grau > 50) return -400;
+                    if (d.grau > 20) return -250;
+                    if (d.grau > 10) return -180;
+                    return -120; // Nós pequenos têm repulsão moderada.
+                })
+                .distanceMax(800))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("collision", d3.forceCollide()
+                .radius(d => getNodeSize(d.grau) + 5)
+                .strength(0.9))
+            .force("x", d3.forceX(width / 2).strength(0.02))
+            .force("y", d3.forceY(height / 2).strength(0.02))
+            .alphaDecay(0.018)
+            .velocityDecay(0.35);
+        
+        // Criar links.
+        const link = linkGroup.selectAll("line")
+            .data(links)
+            .join("line")
+            .attr("class", "link")
+            .attr("stroke", d => {
+                // Gradiente baseado nos nós conectados.
+                const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+                const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+                const sourceNode = nodes.find(n => n.id === sourceId);
+                const targetNode = nodes.find(n => n.id === targetId);
+                if (sourceNode && targetNode) {
+                    return d3.interpolateRgb(
+                        getNodeColor(sourceNode.grau), 
+                        getNodeColor(targetNode.grau)
+                    )(0.5);
+                }
+                return "#00ffff";
+            })
+            .attr("stroke-width", d => {
+                // Espessura baseada na importância da conexão.
+                const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+                const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+                const sourceNode = nodes.find(n => n.id === sourceId);
+                const targetNode = nodes.find(n => n.id === targetId);
+                if (sourceNode && targetNode) {
+                    const maxGrau = Math.max(sourceNode.grau, targetNode.grau);
+                    if (maxGrau > 500) return 2.5;
+                    if (maxGrau > 100) return 2;
+                    if (maxGrau > 50) return 1.5;
+                    return 1;
+                }
+                return 1;
+            })
+            .attr("stroke-opacity", d => {
+                // Opacidade baseada na importância.
+                const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+                const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+                const sourceNode = nodes.find(n => n.id === sourceId);
+                const targetNode = nodes.find(n => n.id === targetId);
+                if (sourceNode && targetNode) {
+                    const maxGrau = Math.max(sourceNode.grau, targetNode.grau);
+                    if (maxGrau > 100) return 0.5;
+                    if (maxGrau > 50) return 0.35;
+                    if (maxGrau > 20) return 0.25;
+                    return 0.15;
+                }
+                return 0.2;
+            }) // Mostrando Tooltip de aresta.
+            .on("mouseover", function(event, d) {
+                const currentWidth = parseFloat(d3.select(this).attr("stroke-width"));
+                d3.select(this)
+                    .attr("stroke-opacity", 0.9)
+                    .attr("stroke-width", currentWidth + 2);
+                
+                const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+                const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+                
+                showTooltip(event, {
+                    type: "link",
+                    remetente: sourceId,
+                    destinatario: targetId,
+                    assunto: d.assunto
+                });
+            })
+            .on("mouseout", function(event, d) {
+                const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+                const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+                const sourceNode = nodes.find(n => n.id === sourceId);
+                const targetNode = nodes.find(n => n.id === targetId);
+                
+                let opacity = 0.2;
+                let width = 1;
+                
+                if (sourceNode && targetNode) {
+                    const maxGrau = Math.max(sourceNode.grau, targetNode.grau);
+                    if (maxGrau > 100) {
+                        opacity = 0.5;
+                        width = 2.5;
+                    } else if (maxGrau > 50) {
+                        opacity = 0.35;
+                        width = 2;
+                    } else if (maxGrau > 20) {
+                        opacity = 0.25;
+                        width = 1.5;
+                    } else {
+                        opacity = 0.15;
+                        width = 1;
+                    }
+                }
+                
+                d3.select(this)
+                    .attr("stroke-opacity", opacity)
+                    .attr("stroke-width", width);
+                hideTooltip();
+            });
+        
+        // Criar nós.
+        const node = nodeGroup.selectAll("g")
+            .data(nodes)
+            .join("g")
+            .attr("class", "node")
+            .call(drag(simulation));
+        
+        // Círculos dos nós.
+        node.append("circle")
+            .attr("r", d => getNodeSize(d.grau))
+            .attr("fill", d => getNodeColor(d.grau))
+            .attr("stroke", "#ffffff")
+            .attr("stroke-width", 1.5)
+            .style("filter", d => `drop-shadow(0 0 ${getNodeSize(d.grau)/2}px ${getNodeColor(d.grau)})`);
+        
+        // Labels dos nós.
+        node.append("text")
+            .attr("class", "node-label")
+            .attr("dy", d => -getNodeSize(d.grau) - 5)
+            .attr("text-anchor", "middle")
+            .style("fill", d => getNodeColor(d.grau))
+            .style("font-size", d => Math.max(10, getNodeSize(d.grau) * 0.6) + "px")
+            .text(d => d.id);
+        
+        // Eventos de hover nos nós.
+        node.on("mouseover", function(event, d) {
+            d3.select(this).select("circle")
+                .transition()
+                .duration(200)
+                .attr("r", getNodeSize(d.grau) * 1.3);
+            
+            showTooltip(event, {
+                type: "node",
+                nome: d.id,
+                grau: d.grau
+            });
+        })
+        .on("mouseout", function(event, d) {
+            d3.select(this).select("circle")
+                .transition()
+                .duration(200)
+                .attr("r", getNodeSize(d.grau));
+            
+            hideTooltip();
+        });
+        
+        // Atualizar posições na simulação.
+        simulation.on("tick", () => {
+            link
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+            
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+        
+        // Função de drag.
+        function drag(simulation) {
+            function dragstarted(event) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                event.subject.fx = event.subject.x;
+                event.subject.fy = event.subject.y;
+            }
+            
+            function dragged(event) {
+                event.subject.fx = event.x;
+                event.subject.fy = event.y;
+            }
+            
+            function dragended(event) {
+                if (!event.active) simulation.alphaTarget(0);
+                event.subject.fx = null;
+                event.subject.fy = null;
+            }
+            
+            return d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended);
+        }
+        
+        // Tooltip.
+        const tooltip = d3.select("#tooltip");
+        
+        function showTooltip(event, data) {
+            let content = "";
+            
+            if (data.type === "node") {
+                content = `
+                    <div class="tooltip-title">${data.nome}</div>
+                    <div class="tooltip-content">
+                        <span class="tooltip-highlight">Conexões:</span> ${data.grau}
+                    </div>
+                `;
+            } else if (data.type === "link") {
+                content = `
+                    <div class="tooltip-title" style="font-size: 0.8rem;">Email</div>
+                    <div class="tooltip-content" style="font-size: 0.75rem;">
+                        <div><span class="tooltip-highlight">De:</span> ${data.remetente}</div>
+                        <div><span class="tooltip-highlight">Para:</span> ${data.destinatario}</div>
+                        <div style="margin-top: 8px;"><span class="tooltip-highlight">Assunto:</span> ${data.assunto}</div>
+                    </div>
+                `;
+            }
+            
+            tooltip
+                .html(content)
+                .classed("active", true)
+                .style("left", (event.pageX + 15) + "px")
+                .style("top", (event.pageY + 15) + "px");
+        }
+        
+        function hideTooltip() {
+            tooltip.classed("active", false);
+        }
+        
+        // Física de interação.
+        let physicsRunning = true;
+        window.togglePhysics = function() {
+            if (physicsRunning) {
+                simulation.stop();
+                physicsRunning = false;
+            } else {
+                simulation.restart();
+                physicsRunning = true;
+            }
+        };
+        
+        // Animação inicial.
+        node.style("opacity", 0)
+            .transition()
+            .duration(1000)
+            .delay((d, i) => i * 2)
+            .style("opacity", 1);
+        
+        link.style("opacity", 0)
+            .transition()
+            .duration(1500)
+            .delay(500)
+            .style("opacity", 0.4);
+    </script>
+</body>
+</html>
